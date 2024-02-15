@@ -3,7 +3,7 @@ addEventListener('fetch', event => {
   })
   
   // 设置优选地址，不带端口号默认8443，不支持非TLS订阅生成
-  let addresses = [
+  let addressesdomain = [
 	'www.visa.com.hk:2096#假装是香港',
 	'icook.tw:2053#假装是台湾',
 	'cloudflare.cfgo.cc#真的是美国'
@@ -19,7 +19,7 @@ addEventListener('fetch', event => {
 	//'https://raw.githubusercontent.com/cmliu/WorkerVless2sub/main/addressescsv.csv' //iptest测速结果文件。
   ];
   
-  let subconverter = "api.v1.mk"; //在线订阅转换后端，目前使用肥羊的订阅转换功能。支持自建psub 可自行搭建https://github.com/bulianglin/psub
+  let subconverter = "sub-aylz.koyeb.app"; //在线订阅转换后端，目前使用肥羊的订阅转换功能。支持自建psub 可自行搭建https://github.com/bulianglin/psub
   let subconfig = "https://raw.githubusercontent.com/cmliu/edgetunnel/main/Clash/config/ACL4SSR_Online_Full_MultiMode.ini"; //订阅配置文件
 
   let link = '';
@@ -59,7 +59,8 @@ addEventListener('fetch', event => {
 	
 		  const text = await response.text();
 		  const lines = text.split('\n');
-		  const regex = /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?(#.*)?$/;
+		  //const regex = /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?(#.*)?$/;
+		  const regex = /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?/;
 	
 		  const apiAddresses = lines.map(line => {
 			const match = line.match(regex);
@@ -141,7 +142,7 @@ addEventListener('fetch', event => {
 	let uuid = "";
 	let path = "";
 
-	if (url.pathname.includes("/auto") || url.pathname.includes("/404") || url.pathname.includes("/sos")) {
+	if (url.pathname.includes("/free")  /*|| url.pathname.includes("/404") || url.pathname.includes("/sos")*/ ) {
 		host = "edgetunnel-2z2.pages.dev";
 		uuid = "30e9c5c8-ed28-4cd9-b008-dc67277f8b02";
 		path = "/?ed=2048";
@@ -149,7 +150,9 @@ addEventListener('fetch', event => {
 		//RproxyIP = 'true';
 	
 	await sendMessage("#获取订阅", request.headers.get('CF-Connecting-IP'), `UA: ${userAgent}</tg-spoiler>\n域名: ${url.hostname}\n<tg-spoiler>入口: ${url.pathname + url.search}</tg-spoiler>`);
-	} else if (url.pathname.includes("/lunzi")) {
+	}
+	/*
+	else if (url.pathname.includes("/lunzi")) {
 		let sites = [
 			{ url: 'https://raw.githubusercontent.com/Alvin9999/pac2/master/xray/config.json',type: "xray"},
 			{ url: 'https://raw.githubusercontent.com/Alvin9999/pac2/master/xray/1/config.json',type: "xray" },
@@ -213,12 +216,15 @@ addEventListener('fetch', event => {
             // 错误处理
         }
 
-	} else {
+	}
+	*/
+	 else {
 		host = url.searchParams.get('host');
 		uuid = url.searchParams.get('uuid');
 		path = url.searchParams.get('path');
 		
 		if (!url.pathname.includes("/sub")) {
+		/*
 			const workerUrl = url.origin + url.pathname;
 			const responseText = `
 		路径必须包含 "/sub"
@@ -240,9 +246,12 @@ addEventListener('fetch', event => {
 			  status: 400,
 			  headers: { 'content-type': 'text/plain; charset=utf-8' },
 			});
+		  */
+			return new Response('Not found', { status: 404 });
 		  }
 		
 		  if (!host || !uuid) {
+		  /*
 			const workerUrl = url.origin + url.pathname;
 			const responseText = `
 		缺少必填参数：host 和 uuid
@@ -264,6 +273,8 @@ addEventListener('fetch', event => {
 			  status: 400,
 			  headers: { 'content-type': 'text/plain; charset=utf-8' },
 			});
+			*/
+			return new Response('Not found', { status: 404 });
 		  }
 		
 		  if (!path || path.trim() === '') {
@@ -342,13 +353,19 @@ addEventListener('fetch', event => {
 		}
 		const newAddressesapi = await getAddressesapi();
 		const newAddressescsv = await getAddressescsv();
+        let addresses = [];
+        if(url.searchParams.get('domain') == 'true' || url.searchParams.get('domain') == "1"){
+        	addresses = addressesdomain;
+        	//console.log('addresses:',addresses);
+        }
 		addresses = addresses.concat(newAddressesapi);
 		addresses = addresses.concat(newAddressescsv);
+		//console.log('addresses:',addresses);
 	
 		// 使用Set对象去重
 		const uniqueAddresses = [...new Set(addresses)];
 		
-		const responseBody = uniqueAddresses.map(address => {
+		const responseBody = await (await Promise.all(uniqueAddresses.map(async (address) => {
 			let port = "8443";
 			let addressid = address;
 		
@@ -362,6 +379,7 @@ addEventListener('fetch', event => {
 				const parts = address.split(':');
 				address = parts[0];
 				port = parts[1];
+				addressid = await findcountry(address);
 			} else if (address.includes('#')) {
 				const parts = address.split('#');
 				address = parts[0];
@@ -372,6 +390,10 @@ addEventListener('fetch', event => {
 			addressid = addressid.split(':')[0];
 			}
 			
+			//console.log('address:',address);
+			//console.log('port:',port);
+			//console.log('addressid:', addressid);
+
 			edgetunnel = url.searchParams.get('edgetunnel') || edgetunnel;
 			RproxyIP = url.searchParams.get('proxyip') || RproxyIP;
 			if (edgetunnel.trim() === 'cmliu' && RproxyIP.trim() === 'true') {
@@ -383,8 +405,8 @@ addEventListener('fetch', event => {
 				// 遍历CMproxyIPs数组查找匹配项
 				for (let item of CMproxyIPs) {
 					if (lowerAddressid.includes(item.type.toLowerCase())) {
-					foundProxyIP = item.proxyIP;
-					break; // 找到匹配项，跳出循环
+						foundProxyIP = item.proxyIP;
+						break; // 找到匹配项，跳出循环
 					}
 				}
 	
@@ -398,8 +420,8 @@ addEventListener('fetch', event => {
 				}
 			}
 			  
-			let 最终路径 = path ;
-			if(url.searchParams.get('host') && url.searchParams.get('host').includes('workers.dev')) {
+			let 最终路径 = path;
+			if (url.searchParams.get('host') && url.searchParams.get('host').includes('workers.dev')) {
 				最终路径 = `/${url.searchParams.get('host')}${path}`;
 				host = proxyhosts[Math.floor(Math.random() * proxyhosts.length)];
 				EndPS = ' 已启用临时域名中转服务,请尽快绑定自定义域!';
@@ -407,7 +429,7 @@ addEventListener('fetch', event => {
 			const vlessLink = `vless://${uuid}@${address}:${port}?encryption=none&security=tls&sni=${host}&fp=random&type=ws&host=${host}&path=${encodeURIComponent(最终路径)}#${encodeURIComponent(addressid + EndPS)}`;
 		
 			return vlessLink;
-		  }).join('\n');
+		}))).join('\n');
 	
 	  const combinedContent = responseBody + '\n' + link; // 合并内容
 	  const base64Response = btoa(combinedContent); // 重新进行 Base64 编码
@@ -418,6 +440,19 @@ addEventListener('fetch', event => {
   
 	  return response;
 	}
+}
+
+async function findcountry(ip) {
+	let msg = "";
+    const response = await fetch(`http://ip-api.com/json/${ip}`);
+	if (response.status == 200) {
+		const ipInfo = await response.json();
+		//console.log('ipInfo:',ipInfo);
+		msg = `${ipInfo.countryCode} ${ipInfo.as}`;
+	} else {
+		msg = `${ip}`;
+	}
+	return msg;
 }
 
 async function sendMessage(type, ip, add_data = "") {
