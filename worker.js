@@ -351,12 +351,17 @@ addEventListener('fetch', event => {
 			// 使用Set对象去重
 			proxyhosts = [...new Set(proxyhosts)];
 		}
-		const newAddressesapi = await getAddressesapi();
-		const newAddressescsv = await getAddressescsv();
+		var newAddressesapi = await getAddressesapi();
+		var newAddressescsv = await getAddressescsv();
         let addresses = [];
         if(url.searchParams.get('domain') == 'true' || url.searchParams.get('domain') == "1"){
         	addresses = addressesdomain;
         	//console.log('addresses:',addresses);
+        }
+        if(newAddressesapi.length > 40){
+        console.log('newAddressesapi:',newAddressesapi);
+        	newAddressesapi = getRandomArrayElements(newAddressesapi, 40);
+        console.log('newAddressesapi2:',newAddressesapi);
         }
 		addresses = addresses.concat(newAddressesapi);
 		addresses = addresses.concat(newAddressescsv);
@@ -440,6 +445,17 @@ addEventListener('fetch', event => {
   
 	  return response;
 	}
+}
+
+function getRandomArrayElements(arr, count) {
+    var shuffled = arr.slice(0), i = arr.length, min = i - count, temp, index;
+    while (i-- > min) {
+        index = Math.floor((i + 1) * Math.random());
+        temp = shuffled[index];
+        shuffled[index] = shuffled[i];
+        shuffled[i] = temp;
+    }
+    return shuffled.slice(min);
 }
 
 async function findcountry(ip) {
